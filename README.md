@@ -62,11 +62,6 @@ This project explores the intersection of computer vision, human–computer inte
 
 ---
 
-## 🎥 Demo
-![Gesture Controlled Particles Demo](demo.gif)
-
----
-
 ## ⚠️ Notes
 - Requires webcam access
 - Best experienced on desktop
