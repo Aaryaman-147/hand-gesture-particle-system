@@ -52,4 +52,12 @@ This project explores the intersection of computer vision, human–computer inte
 
 ---
 
+## 🧠 How It Works
+- MediaPipe Hands tracks 21 hand landmarks in real time
+- Finger count and pinch distance are computed from landmark geometry
+- Gestures map to procedural particle templates
+- Smooth interpolation (lerp) ensures fluid transitions
+
+---
+
 ⭐ If you like it, give it a star!
