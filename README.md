@@ -35,3 +35,17 @@ This project explores the intersection of computer vision, human–computer inte
 | 🖖 Four Fingers  | 4             | 🧬 DNA Helix         |
 | 🖐 Open Palm     | 5             | ⚪ Particle Sphere    |
 | 🤏 Pinch         | Thumb + Index | 🔍 Scale / Expansion |
+
+---
+
+## 🧩 Tech Stack
+
+- Three.js – 3D rendering & particle system
+
+- MediaPipe Hands – real-time hand landmark detection
+
+- JavaScript (ES6)
+
+- WebGL
+
+- HTML / CSS
