@@ -22,6 +22,10 @@ This project explores the intersection of computer vision, human–computer inte
   
 - 🌌 Idle Mode Animation — particles gently animate when no hand is detected
 
+- 🔒 Universal Mode Lock — hold any gesture for 1 second to lock the mode
+
+- 🖐 Universal Unlock — open palm to return to normal gesture control
+
 - ⚡ GPU-accelerated rendering with Three.js
 
 - 🌐 Runs entirely in the browser — no backend required
