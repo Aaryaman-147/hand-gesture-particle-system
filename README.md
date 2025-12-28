@@ -21,3 +21,17 @@ This project explores the intersection of computer vision, human–computer inte
 - ⚡ GPU-accelerated rendering with Three.js
 
 - 🌐 Runs entirely in the browser — no backend required
+
+---
+
+  ## 🖐️ Gesture Controls
+
+| Gesture          | Fingers       | Effect               |
+| ---------------- | ------------- | -------------------- |
+| ✊ Fist           | 0             | 🌌 Galactic Vortex   |
+| ☝️ One Finger    | 1             | 🪐 Saturn Rings      |
+| ✌️ Two Fingers   | 2             | ❤️ Heart             |
+| 🤟 Three Fingers | 3             | 🌸 Flower            |
+| 🖖 Four Fingers  | 4             | 🧬 DNA Helix         |
+| 🖐 Open Palm     | 5             | ⚪ Particle Sphere    |
+| 🤏 Pinch         | Thumb + Index | 🔍 Scale / Expansion |
