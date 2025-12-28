@@ -76,6 +76,10 @@
             background-color: #00ff88;
             box-shadow: 0 0 10px #00ff88;
         }
+        .status-dot.locked {
+            background-color: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
         #video-preview {
             position: absolute;
             bottom: 20px;
@@ -145,6 +149,16 @@
             display: none;
             z-index: 100;
         }
+        /* Lock Animation Pulse */
+        @keyframes lockPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .locking {
+            color: #ffaa00;
+            animation: lockPulse 0.5s infinite;
+        }
     </style>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -167,6 +181,9 @@
         <button id="start-btn">Start Camera Control</button>
 
         <div class="gesture-guide">
+            <div class="gesture-item"><span class="gesture-icon">🔒</span> <strong>Hold Any: Lock</strong></div>
+            <div class="gesture-item"><span class="gesture-icon">🔓</span> <strong>Open Palm: Unlock</strong></div>
+            <div style="height: 10px;"></div>
             <div class="gesture-item"><span class="gesture-icon">👏</span> Hands Together: Explosion</div>
             <div class="gesture-item"><span class="gesture-icon">🤘</span> Rock On: Star Map</div>
             <div class="gesture-item"><span class="gesture-icon">🤙</span> Shaka: Cyber Iris</div>
@@ -216,7 +233,13 @@ let rotationSpeed = { x: 0, y: 0.001 };
 let targetRotation = { x: 0, y: 0 };
 let currentShape = 'sphere';
 let isTracking = false;
-let lastHandTime = 0; // Timestamp of last hand detection
+let lastHandTime = 0; 
+
+// Lock Features
+let isLocked = false;
+let lockTimer = 0;
+const LOCK_THRESHOLD = 40; // Frames to hold for lock (~0.7s - 1s)
+let lastDetectedShape = 'sphere';
 
 // --- Three.js Setup ---
 function initThree() {
@@ -541,16 +564,26 @@ function animate() {
     const isHandLost = isTracking && (now - lastHandTime > 1000);
 
     if (isHandLost) {
-        // -- IDLE MODE --
-        if (currentShape !== 'sphere') calculateShape('sphere');
-        
-        document.getElementById('shape-name').innerText = "Scanning...";
-        
-        const breath = 1.0 + Math.sin(now * 0.002) * 0.2;
-        expansion += (breath - expansion) * 0.05; 
-        
-        particles.rotation.y += 0.002;
-        particles.rotation.x += (0 - particles.rotation.x) * 0.05; 
+        if (!isLocked) {
+            // -- IDLE MODE (Unlocked) --
+            // Revert to sphere
+            if (currentShape !== 'sphere') calculateShape('sphere');
+            document.getElementById('shape-name').innerText = "Scanning...";
+            
+            const breath = 1.0 + Math.sin(now * 0.002) * 0.2;
+            expansion += (breath - expansion) * 0.05; 
+            
+            particles.rotation.y += 0.002;
+            particles.rotation.x += (0 - particles.rotation.x) * 0.05; 
+        } else {
+            // -- IDLE MODE (Locked) --
+            // Keep current shape, but breathe
+            const breath = 1.0 + Math.sin(now * 0.002) * 0.1; // Gentle breath
+            expansion += (breath - expansion) * 0.05;
+            
+            // Allow gentle rotation
+            particles.rotation.y += 0.002;
+        }
 
     } else if (!isTracking) {
         // -- PRE-START MODE --
@@ -560,7 +593,7 @@ function animate() {
         let autoRotY = 0;
         if (currentShape === 'vortex') autoRotY = 0.01;
         if (currentShape === 'helix') autoRotY = 0.005;
-        if (currentShape === 'constellation') autoRotY = 0.0005; // Slow rotation for stars
+        if (currentShape === 'constellation') autoRotY = 0.0005;
 
         // Apply hand rotation with smoothing
         particles.rotation.x += (targetRotation.x - particles.rotation.x) * 0.05;
@@ -672,34 +705,15 @@ function onResults(results) {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         lastHandTime = Date.now(); // Update watch dog timer
         const landmarks = results.multiHandLandmarks[0];
-        
-        // --- CLAP DETECTION (Interaction between 2 hands) ---
-        let isClapping = false;
-        if (results.multiHandLandmarks.length === 2) {
-            const hand1 = results.multiHandLandmarks[0];
-            const hand2 = results.multiHandLandmarks[1];
-            
-            // Calculate distance between mid-palms (index 9)
-            const p1 = hand1[9];
-            const p2 = hand2[9];
-            const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-            
-            if (dist < 0.15) { // Threshold for clap
-                isClapping = true;
-                calculateShape('explosion');
-                return; // Skip single hand logic if clapping
-            }
-        }
+        const statusEl = document.getElementById('status-text');
+        const statusDotEl = document.getElementById('status-dot');
 
-        // --- SINGLE HAND LOGIC ---
-        
-        // Rotation Mappings
+        // --- SINGLE HAND BASICS ---
         const cx = landmarks[9].x; 
         const cy = landmarks[9].y;
         targetRotation.y = (cx - 0.5) * 4; 
         targetRotation.x = (cy - 0.5) * 4;
 
-        // Pinch Expansion
         const thumbTip = landmarks[4];
         const indexTip = landmarks[8];
         const distance = Math.sqrt(
@@ -713,7 +727,7 @@ function onResults(results) {
         expansion += (targetExpansion - expansion) * 0.1;
         document.getElementById('expansion-val').innerText = expansion.toFixed(2);
 
-        // --- FINGER STATE CALCULATION ---
+        // --- FINGER STATE ---
         const wrist = landmarks[0];
         const getDist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
 
@@ -723,34 +737,93 @@ function onResults(results) {
         const isRingUp = getDist(landmarks[16], wrist) > getDist(landmarks[14], wrist) * 1.1;
         const isPinkyUp = getDist(landmarks[20], wrist) > getDist(landmarks[18], wrist) * 1.1;
 
-        // Calculate standard count
         const count = (isThumbUp ? 1 : 0) + (isIndexUp ? 1 : 0) + (isMiddleUp ? 1 : 0) + (isRingUp ? 1 : 0) + (isPinkyUp ? 1 : 0);
         
-        // --- GESTURE MAPPING ---
+        const isShaka = isThumbUp && isPinkyUp && !isIndexUp && !isMiddleUp && !isRingUp;
+        // const isOpenPalm = count >= 5; // Defined below based on detectedShape for logic
+
+        // --- DETERMINE INTENDED SHAPE ---
+        let detectedShape = 'sphere'; // Default
+
+        // 1. Clap Check (Highest Priority)
+        if (results.multiHandLandmarks.length === 2) {
+            const hand1 = results.multiHandLandmarks[0];
+            const hand2 = results.multiHandLandmarks[1];
+            const p1 = hand1[9];
+            const p2 = hand2[9];
+            const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            if (dist < 0.15) { 
+                detectedShape = 'explosion';
+            }
+        }
         
-        // Shaka 🤙 (Thumb + Pinky only)
-        if (isThumbUp && isPinkyUp && !isIndexUp && !isMiddleUp && !isRingUp) {
-            calculateShape('iris');
+        // 2. Single Hand Checks (If not clapping)
+        if (detectedShape === 'sphere') { // If no clap yet
+             if (isShaka) {
+                detectedShape = 'iris';
+            }
+            else if (!isThumbUp && isIndexUp && isPinkyUp && !isMiddleUp && !isRingUp) {
+                detectedShape = 'constellation';
+            }
+            else if (count === 0) {
+                detectedShape = 'vortex';
+            } else if (count === 1) {
+                detectedShape = 'saturn';
+            } else if (count === 2) {
+                detectedShape = 'heart';
+            } else if (count === 3) {
+                detectedShape = 'flower';
+            } else if (count === 4) {
+                detectedShape = 'helix';
+            }
+            // count >= 5 remains 'sphere'
         }
-        // Rock On 🤘 (Index + Pinky only, Thumb usually tucked or crossed)
-        // We ensure middle and ring are down. Thumb is flexible but strictly Rock On usually has thumb tucked.
-        else if (!isThumbUp && isIndexUp && isPinkyUp && !isMiddleUp && !isRingUp) {
-            calculateShape('constellation');
+
+        // --- LOCK LOGIC ---
+        // 5 Fingers (Sphere) is the UNLOCK gesture
+        const isUnlockGesture = (count >= 5 && detectedShape === 'sphere');
+
+        if (isLocked) {
+             statusEl.innerText = "LOCKED 🔒";
+             statusEl.style.color = "#ffaa00";
+             statusEl.classList.add("locking");
+             statusDotEl.classList.remove("active");
+             statusDotEl.classList.add("locked");
+             
+             // Unlock?
+             if (isUnlockGesture) {
+                 isLocked = false;
+                 lockTimer = 0;
+                 statusEl.classList.remove("locking");
+                 statusEl.style.color = "white";
+                 statusDotEl.classList.remove("locked");
+                 statusDotEl.classList.add("active");
+             } else {
+                 // Remain locked, do not update shape
+                 return;
+             }
+        } 
+        
+        // Not locked (or just unlocked)
+        calculateShape(detectedShape);
+        statusEl.innerText = "Tracking Active";
+        statusEl.style.color = "white";
+        statusDotEl.classList.remove("locked");
+        statusDotEl.classList.add("active");
+
+        // Timer Logic for Locking
+        // We lock if: Shape is stable (same as last frame) AND Shape is NOT the unlock gesture (Sphere)
+        if (detectedShape === lastDetectedShape && detectedShape !== 'sphere') {
+             lockTimer++;
+             if (lockTimer > LOCK_THRESHOLD) {
+                 isLocked = true;
+             } else if (lockTimer > 10) {
+                 statusEl.innerText = `Holding... ${Math.floor((lockTimer/LOCK_THRESHOLD)*100)}%`;
+             }
+        } else {
+             lockTimer = 0;
         }
-        // Standard Counts
-        else if (count === 0) {
-            calculateShape('vortex');
-        } else if (count === 1) {
-            calculateShape('saturn');
-        } else if (count === 2) {
-            calculateShape('heart');
-        } else if (count === 3) {
-            calculateShape('flower');
-        } else if (count === 4) {
-            calculateShape('helix');
-        } else if (count >= 5) {
-             if (distance > 0.1) calculateShape('sphere');
-        }
+        lastDetectedShape = detectedShape;
     }
 }
 
