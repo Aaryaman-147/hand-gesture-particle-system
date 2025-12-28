@@ -30,12 +30,12 @@ This project explores the intersection of computer vision, human–computer inte
 
 | Gesture          | Fingers       | Effect               |
 | ---------------- | ------------- | -------------------- |
-| ✊ Fist           |    **0**        | 🌌 Galactic Vortex   |
-| ☝️ One Finger    |     **1**       | 🪐 Saturn Rings      |
-| ✌️ Two Fingers   |     **2**       | ❤️ Heart             |
-| 🤟 Three Fingers |     **3**       | 🌸 Flower            |
-| 🖖 Four Fingers  |     **4**       | 🧬 DNA Helix         |
-| 🖐 Open Palm     |     **5**       | ⚪ Particle Sphere    |
+| ✊ Fist           |    0        | 🌌 Galactic Vortex   |
+| ☝️ One Finger    |     1       | 🪐 Saturn Rings      |
+| ✌️ Two Fingers   |     2       | ❤️ Heart             |
+| 🤟 Three Fingers |     3       | 🌸 Flower            |
+| 🖖 Four Fingers  |     4       | 🧬 DNA Helix         |
+| 🖐 Open Palm     |     5       | ⚪ Particle Sphere    |
 | 🤏 Pinch         | Thumb + Index | 🔍 Scale / Expansion |
 
 ---
