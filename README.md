@@ -6,6 +6,8 @@ The project transforms intuitive hand poses into visually distinct particle form
 
 This project explores the intersection of computer vision, human–computer interaction, and procedural 3D graphics.
 
+🔗 Live Demo: 
+
 ---
 
 ## ✨ Features
@@ -57,6 +59,22 @@ This project explores the intersection of computer vision, human–computer inte
 - Finger count and pinch distance are computed from landmark geometry
 - Gestures map to procedural particle templates
 - Smooth interpolation (lerp) ensures fluid transitions
+
+---
+
+## 🎥 Demo
+![Gesture Controlled Particles Demo](demo.gif)
+
+---
+
+## ⚠️ Notes
+- Requires webcam access
+- Best experienced on desktop
+
+---
+
+## 📄 License
+MIT License
 
 ---
 
