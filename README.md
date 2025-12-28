@@ -28,6 +28,8 @@ This project explores the intersection of computer vision, human–computer inte
 
   ## 🖐️ Gesture Controls
 
+<div align="center">
+  
 | Gesture          | Fingers       | Effect               |
 | ---------------- | ------------- | -------------------- |
 | ✊ Fist           |    0        | 🌌 Galactic Vortex   |
@@ -37,6 +39,8 @@ This project explores the intersection of computer vision, human–computer inte
 | 🖖 Four Fingers  |     4       | 🧬 DNA Helix         |
 | 🖐 Open Palm     |     5       | ⚪ Particle Sphere    |
 | 🤏 Pinch         | Thumb + Index | 🔍 Scale / Expansion |
+
+</div>
 
 ---
 
