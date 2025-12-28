@@ -6,7 +6,7 @@ The project transforms intuitive hand poses into visually distinct particle form
 
 This project explores the intersection of computer vision, human–computer interaction, and procedural 3D graphics.
 
-🔗 Live Demo: 
+🔗 Live Demo: (https://aaryaman-147.github.io/hand-gesture-particle-system)
 
 ---
 
