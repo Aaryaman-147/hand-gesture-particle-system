@@ -149,7 +149,6 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- MediaPipe Hands -->
-    <!-- Pinned versions to ensure assets load correctly -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
@@ -168,6 +167,9 @@
         <button id="start-btn">Start Camera Control</button>
 
         <div class="gesture-guide">
+            <div class="gesture-item"><span class="gesture-icon">👏</span> Hands Together: Explosion</div>
+            <div class="gesture-item"><span class="gesture-icon">🤘</span> Rock On: Star Map</div>
+            <div class="gesture-item"><span class="gesture-icon">🤙</span> Shaka: Cyber Iris</div>
             <div class="gesture-item"><span class="gesture-icon">✊</span> Fist: Galactic Vortex</div>
             <div class="gesture-item"><span class="gesture-icon">☝️</span> 1 Finger: Saturn</div>
             <div class="gesture-item"><span class="gesture-icon">✌️</span> 2 Fingers: Heart</div>
@@ -189,7 +191,7 @@
  */
 
 // --- Configuration ---
-const PARTICLE_COUNT = 15000; // Increased count for better Helix/Galaxy definition
+const PARTICLE_COUNT = 15000;
 const PARTICLE_SIZE = 0.07;
 const COLORS = {
     sphere: [0.2, 0.6, 1.0], // Blue-ish
@@ -197,7 +199,10 @@ const COLORS = {
     flower: [0.8, 0.3, 0.9], // Purple
     saturn: [0.9, 0.7, 0.2], // Gold
     helix: [0.0, 1.0, 0.5],  // Cyan/Green
-    vortex: [0.5, 0.1, 0.8]  // Deep Purple
+    vortex: [0.5, 0.1, 0.8], // Deep Purple
+    explosion: [1.0, 0.6, 0.0], // Orange/Gold Fire
+    iris: [0.3, 1.0, 1.0],   // Cyan/Bright Blue
+    constellation: [0.9, 0.9, 1.0] // White/Silver
 };
 
 // --- Global State ---
@@ -211,6 +216,7 @@ let rotationSpeed = { x: 0, y: 0.001 };
 let targetRotation = { x: 0, y: 0 };
 let currentShape = 'sphere';
 let isTracking = false;
+let lastHandTime = 0; // Timestamp of last hand detection
 
 // --- Three.js Setup ---
 function initThree() {
@@ -292,9 +298,13 @@ function calculateShape(shape) {
         'heart': 'Neon Heart',
         'flower': 'Cyber Flower',
         'helix': 'DNA Helix',
-        'sphere': 'Particle Sphere'
+        'sphere': 'Particle Sphere',
+        'explosion': 'SUPERNOVA',
+        'iris': 'Cyber Iris',
+        'constellation': 'Star Map'
     };
-    document.getElementById('shape-name').innerText = titles[shape] || 'Unknown';
+    const title = titles[shape] || 'Unknown';
+    document.getElementById('shape-name').innerText = title;
 
     const positions = targetPositions; // Write to global target array
     let colorSet = COLORS[shape] || COLORS.sphere;
@@ -302,10 +312,41 @@ function calculateShape(shape) {
     // Helper: Set global target colors uniformly
     for(let i=0; i<PARTICLE_COUNT; i++) {
         // Add variation to color for richness
-        const variation = (Math.random() - 0.5) * 0.2;
-        targetColors[i*3] = Math.max(0, Math.min(1, colorSet[0] + variation));
-        targetColors[i*3+1] = Math.max(0, Math.min(1, colorSet[1] + variation));
-        targetColors[i*3+2] = Math.max(0, Math.min(1, colorSet[2] + variation));
+        let variation = (Math.random() - 0.5) * 0.2;
+        
+        // Special color logic
+        if (shape === 'explosion') {
+            const r = 1.0;
+            const g = Math.random() * 0.8; 
+            const b = Math.random() * 0.2;
+            targetColors[i*3] = r;
+            targetColors[i*3+1] = g;
+            targetColors[i*3+2] = b;
+        } 
+        else if (shape === 'iris') {
+            // Dark pupil for the first 10%
+            if (i < PARTICLE_COUNT * 0.1) {
+                targetColors[i*3] = 0.05; // Almost black
+                targetColors[i*3+1] = 0.05;
+                targetColors[i*3+2] = 0.05;
+            } else {
+                targetColors[i*3] = Math.max(0, Math.min(1, colorSet[0] + variation));
+                targetColors[i*3+1] = Math.max(0, Math.min(1, colorSet[1] + variation));
+                targetColors[i*3+2] = Math.max(0, Math.min(1, colorSet[2] + variation));
+            }
+        }
+        else if (shape === 'constellation') {
+             // Twinkling stars effect (white/blue-ish)
+             const brightness = 0.5 + Math.random() * 0.5;
+             targetColors[i*3] = colorSet[0] * brightness;
+             targetColors[i*3+1] = colorSet[1] * brightness;
+             targetColors[i*3+2] = colorSet[2] * brightness;
+        }
+        else {
+            targetColors[i*3] = Math.max(0, Math.min(1, colorSet[0] + variation));
+            targetColors[i*3+1] = Math.max(0, Math.min(1, colorSet[1] + variation));
+            targetColors[i*3+2] = Math.max(0, Math.min(1, colorSet[2] + variation));
+        }
     }
 
     if (shape === 'sphere') {
@@ -328,21 +369,17 @@ function calculateShape(shape) {
 
             positions[i*3] = hx * scale;
             positions[i*3+1] = hy * scale;
-            positions[i*3+2] = hz * (1 - Math.abs(hy)/25); // Taper z based on y
+            positions[i*3+2] = hz * (1 - Math.abs(hy)/25); 
         }
     }
     else if (shape === 'flower') {
         for(let i=0; i<PARTICLE_COUNT; i++) {
-            const theta = Math.random() * Math.PI * 2; // Angle around center
-            const phi = Math.random() * Math.PI; // Elevation
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
             
-            // r = a + b * cos(k * theta)
-            // 3D variant: Petals in multiple layers
-            
-            const k = 5; // 5 petals
+            const k = 5; 
             const rBase = 2 + Math.cos(k * theta) * Math.sin(phi) * 2;
             
-            // Add a second layer of smaller petals
             const isInner = i > PARTICLE_COUNT * 0.7;
             const r = isInner ? rBase * 0.5 : rBase;
             const yOffset = isInner ? 0.5 : 0;
@@ -369,7 +406,6 @@ function calculateShape(shape) {
         // Rings
         for (let i = planetCount; i < PARTICLE_COUNT; i++) {
             const angle = Math.random() * Math.PI * 2;
-            // Distribution with gap
             const dist = 2.0 + Math.random() * 2.5; 
             
             positions[i * 3] = Math.cos(angle) * dist;
@@ -380,19 +416,16 @@ function calculateShape(shape) {
     else if (shape === 'helix') {
         // Double Helix
         for (let i = 0; i < PARTICLE_COUNT; i++) {
-            // Two strands: i % 2
             const isStrandA = i % 2 === 0;
-            const t = (i / PARTICLE_COUNT) * Math.PI * 10; // Height/Coils
-            const y = (i / PARTICLE_COUNT) * 8 - 4; // Height from -4 to 4
+            const t = (i / PARTICLE_COUNT) * Math.PI * 10; 
+            const y = (i / PARTICLE_COUNT) * 8 - 4; 
             const radius = 1.5;
             
             const angleOffset = isStrandA ? 0 : Math.PI;
             
-            // Main structure
             let x = radius * Math.cos(t + angleOffset);
             let z = radius * Math.sin(t + angleOffset);
             
-            // Volumetric thickness
             x += (Math.random() - 0.5) * 0.5;
             z += (Math.random() - 0.5) * 0.5;
             
@@ -402,24 +435,20 @@ function calculateShape(shape) {
         }
     }
     else if (shape === 'vortex') {
-        // Spiral Galaxy / Black Hole
         for (let i = 0; i < PARTICLE_COUNT; i++) {
-            // Logarithmic spiral arms
             const armCount = 3;
             const armIndex = i % armCount;
-            const t = Math.random() * 10; // distance from center logic
+            const t = Math.random() * 10;
             
             const offset = (Math.PI * 2 / armCount) * armIndex;
             const angle = t + offset;
             
-            // Tight center, spread out edge
             const r = t * 0.5; 
             
             let x = r * Math.cos(angle);
             let z = r * Math.sin(angle);
-            let y = (Math.random() - 0.5) * (4 / (r + 0.1)); // Thicker at center
+            let y = (Math.random() - 0.5) * (4 / (r + 0.1));
             
-            // Center bulge
             if (i < 2000) {
                 x = (Math.random() - 0.5) * 1.5;
                 y = (Math.random() - 0.5) * 1.5;
@@ -431,6 +460,71 @@ function calculateShape(shape) {
             positions[i * 3 + 2] = z;
         }
     }
+    else if (shape === 'explosion') {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const r = 5 + Math.random() * 15;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            
+            positions[i * 3] = r * Math.cos(theta) * Math.sin(phi);
+            positions[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
+            positions[i * 3 + 2] = r * Math.cos(phi);
+        }
+    }
+    else if (shape === 'iris') {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            // Pupil
+            if (i < PARTICLE_COUNT * 0.1) {
+                 const r = Math.pow(Math.random(), 0.5) * 0.8;
+                 const theta = Math.random() * Math.PI * 2;
+                 positions[i * 3] = r * Math.cos(theta);
+                 positions[i * 3 + 1] = r * Math.sin(theta);
+                 positions[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
+            } else {
+                 // Iris
+                 const r = 0.8 + Math.pow(Math.random(), 0.8) * 2.2; 
+                 const theta = Math.random() * Math.PI * 2;
+                 const z = Math.sqrt(4*4 - r*r) * -0.25; 
+                 positions[i * 3] = r * Math.cos(theta);
+                 positions[i * 3 + 1] = r * Math.sin(theta);
+                 positions[i * 3 + 2] = z + (Math.random()-0.5)*0.15;
+            }
+        }
+    }
+    else if (shape === 'constellation') {
+        // Celestial Sphere + Milky Way Band
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            // 60% of stars in a dense band (Milky Way)
+            if (i < PARTICLE_COUNT * 0.6) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 3.5 + (Math.random() - 0.5) * 1.0;
+                
+                // Band logic: x/y plane, tilted
+                // Base pos
+                let x = r * Math.cos(angle);
+                let z = r * Math.sin(angle);
+                let y = (Math.random() - 0.5) * 1.5; // Band width
+                
+                // Tilt 45 degrees
+                const tilt = 0.7; // radians
+                let yFinal = y * Math.cos(tilt) - z * Math.sin(tilt);
+                let zFinal = y * Math.sin(tilt) + z * Math.cos(tilt);
+                
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = yFinal;
+                positions[i * 3 + 2] = zFinal;
+            } else {
+                // 40% scattered uniformly on outer sphere
+                const radius = 4.0;
+                const phi = Math.acos(-1 + (2 * (i - PARTICLE_COUNT*0.6)) / (PARTICLE_COUNT*0.4));
+                const theta = Math.sqrt((PARTICLE_COUNT*0.4) * Math.PI) * phi;
+                
+                positions[i * 3] = radius * Math.cos(theta) * Math.sin(phi);
+                positions[i * 3 + 1] = radius * Math.sin(theta) * Math.sin(phi);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+            }
+        }
+    }
 }
 
 // --- Animation Loop ---
@@ -439,23 +533,41 @@ function animate() {
 
     const positions = geometry.attributes.position.array;
     const colors = geometry.attributes.color.array;
-    
     const lerpSpeed = 0.05;
-    
-    // Rotation logic
-    // If Vortex/Helix, auto-rotate is faster or specific
-    let autoRotY = 0.002;
-    if (currentShape === 'vortex') autoRotY = 0.01; // Spin faster
-    if (currentShape === 'helix') autoRotY = 0.005;
+    const now = Date.now();
 
-    if (!isTracking) {
-        particles.rotation.y += autoRotY;
+    // --- IDLE / ACTIVE LOGIC ---
+    // If tracking is active but no hand seen for 1000ms, assume idle
+    const isHandLost = isTracking && (now - lastHandTime > 1000);
+
+    if (isHandLost) {
+        // -- IDLE MODE --
+        if (currentShape !== 'sphere') calculateShape('sphere');
+        
+        document.getElementById('shape-name').innerText = "Scanning...";
+        
+        const breath = 1.0 + Math.sin(now * 0.002) * 0.2;
+        expansion += (breath - expansion) * 0.05; 
+        
+        particles.rotation.y += 0.002;
+        particles.rotation.x += (0 - particles.rotation.x) * 0.05; 
+
+    } else if (!isTracking) {
+        // -- PRE-START MODE --
+        particles.rotation.y += 0.002;
     } else {
-        // Blend hand rotation with auto rotation for lively feel
+        // -- ACTIVE HAND MODE --
+        let autoRotY = 0;
+        if (currentShape === 'vortex') autoRotY = 0.01;
+        if (currentShape === 'helix') autoRotY = 0.005;
+        if (currentShape === 'constellation') autoRotY = 0.0005; // Slow rotation for stars
+
+        // Apply hand rotation with smoothing
         particles.rotation.x += (targetRotation.x - particles.rotation.x) * 0.05;
         particles.rotation.y += (targetRotation.y - particles.rotation.y) * 0.05 + autoRotY;
     }
 
+    // --- PARTICLE PHYSICS LOOP ---
     for (let i = 0; i < PARTICLE_COUNT; i++) {
         const tx = targetPositions[i * 3] * expansion;
         const ty = targetPositions[i * 3 + 1] * expansion;
@@ -504,7 +616,7 @@ startBtn.addEventListener('click', async () => {
     }});
 
     hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2, 
         modelComplexity: 1,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6
@@ -558,7 +670,28 @@ startBtn.addEventListener('click', async () => {
 
 function onResults(results) {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        lastHandTime = Date.now(); // Update watch dog timer
         const landmarks = results.multiHandLandmarks[0];
+        
+        // --- CLAP DETECTION (Interaction between 2 hands) ---
+        let isClapping = false;
+        if (results.multiHandLandmarks.length === 2) {
+            const hand1 = results.multiHandLandmarks[0];
+            const hand2 = results.multiHandLandmarks[1];
+            
+            // Calculate distance between mid-palms (index 9)
+            const p1 = hand1[9];
+            const p2 = hand2[9];
+            const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            
+            if (dist < 0.15) { // Threshold for clap
+                isClapping = true;
+                calculateShape('explosion');
+                return; // Skip single hand logic if clapping
+            }
+        }
+
+        // --- SINGLE HAND LOGIC ---
         
         // Rotation Mappings
         const cx = landmarks[9].x; 
@@ -580,11 +713,33 @@ function onResults(results) {
         expansion += (targetExpansion - expansion) * 0.1;
         document.getElementById('expansion-val').innerText = expansion.toFixed(2);
 
-        // Shape Logic
-        const count = countFingers(landmarks);
+        // --- FINGER STATE CALCULATION ---
+        const wrist = landmarks[0];
+        const getDist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+
+        const isThumbUp = getDist(landmarks[4], wrist) > getDist(landmarks[3], wrist) * 1.2;
+        const isIndexUp = getDist(landmarks[8], wrist) > getDist(landmarks[6], wrist) * 1.1;
+        const isMiddleUp = getDist(landmarks[12], wrist) > getDist(landmarks[10], wrist) * 1.1;
+        const isRingUp = getDist(landmarks[16], wrist) > getDist(landmarks[14], wrist) * 1.1;
+        const isPinkyUp = getDist(landmarks[20], wrist) > getDist(landmarks[18], wrist) * 1.1;
+
+        // Calculate standard count
+        const count = (isThumbUp ? 1 : 0) + (isIndexUp ? 1 : 0) + (isMiddleUp ? 1 : 0) + (isRingUp ? 1 : 0) + (isPinkyUp ? 1 : 0);
         
-        if (count === 0) {
-            calculateShape('vortex'); // Changed from collapse
+        // --- GESTURE MAPPING ---
+        
+        // Shaka 🤙 (Thumb + Pinky only)
+        if (isThumbUp && isPinkyUp && !isIndexUp && !isMiddleUp && !isRingUp) {
+            calculateShape('iris');
+        }
+        // Rock On 🤘 (Index + Pinky only, Thumb usually tucked or crossed)
+        // We ensure middle and ring are down. Thumb is flexible but strictly Rock On usually has thumb tucked.
+        else if (!isThumbUp && isIndexUp && isPinkyUp && !isMiddleUp && !isRingUp) {
+            calculateShape('constellation');
+        }
+        // Standard Counts
+        else if (count === 0) {
+            calculateShape('vortex');
         } else if (count === 1) {
             calculateShape('saturn');
         } else if (count === 2) {
@@ -592,28 +747,11 @@ function onResults(results) {
         } else if (count === 3) {
             calculateShape('flower');
         } else if (count === 4) {
-            calculateShape('helix'); // New Shape
+            calculateShape('helix');
         } else if (count >= 5) {
              if (distance > 0.1) calculateShape('sphere');
         }
     }
-}
-
-function countFingers(lm) {
-    let count = 0;
-    const wrist = lm[0];
-
-    function getDist(p1, p2) {
-        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-    }
-
-    if (getDist(lm[4], wrist) > getDist(lm[3], wrist) * 1.2) count++; // Thumb
-    if (getDist(lm[8], wrist) > getDist(lm[6], wrist) * 1.1) count++; // Index
-    if (getDist(lm[12], wrist) > getDist(lm[10], wrist) * 1.1) count++; // Middle
-    if (getDist(lm[16], wrist) > getDist(lm[14], wrist) * 1.1) count++; // Ring
-    if (getDist(lm[20], wrist) > getDist(lm[18], wrist) * 1.1) count++; // Pinky
-    
-    return count;
 }
 
 initThree();
