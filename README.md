@@ -2,7 +2,7 @@
 
 An interactive, real-time 3D particle system built with Three.js and MediaPipe Hands, where hand gestures control generative particle structures using live webcam input.
 
-The project transforms intuitive hand poses into visually distinct particle formations such as galactic vortices, Saturn rings, hearts, flowers, DNA helices, and spheres, with smooth transitions, dynamic colors, and responsive scaling — all rendered directly in the browser.
+The project transforms intuitive hand poses into visually distinct particle formations such as galactic vortices, Saturn rings, hearts, flowers, DNA helices, cyber iris, supernova and spheres, with smooth transitions, dynamic colours, and responsive scaling — all rendered directly in the browser.
 
 This project explores the intersection of computer vision, human–computer interaction, and procedural 3D graphics.
 
@@ -19,6 +19,8 @@ This project explores the intersection of computer vision, human–computer inte
 - 🌈 Dynamic particle colour transitions
 
 - 🔄 Smooth morphing between particle templates
+  
+- 🌌 Idle Mode Animation — particles gently animate when no hand is detected
 
 - ⚡ GPU-accelerated rendering with Three.js
 
@@ -36,6 +38,9 @@ This project explores the intersection of computer vision, human–computer inte
 | 🤟 Three Fingers |     3       | 🌸 Flower            |
 | 🖖 Four Fingers  |     4       | 🧬 DNA Helix         |
 | 🖐 Open Palm     |     5       | ⚪ Particle Sphere    |
+| 🤙 Shaka         | Thumb + Pinky | 🧿 Eye / Iris Mode  |
+| 🤘 Horns         | Index + pinky | 🌠 Constellation / Star Map |
+| 👏 Hand Clap     | Hands move together quickly | 💥 Supernova |
 | 🤏 Pinch         | Thumb + Index | 🔍 Scale / Expansion |
 
 ---
