@@ -49,3 +49,7 @@ This project explores the intersection of computer vision, human–computer inte
 - WebGL
 
 - HTML / CSS
+
+---
+
+⭐ If you like it, give it a star!
